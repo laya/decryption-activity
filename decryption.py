@@ -21,9 +21,12 @@ import gtk.gdk
 import gcompris
 import gcompris.utils
 import gcompris.skin
+import gcompris.bonus
+import gcompris.sound
 import goocanvas
 import pango
 from key_value import *
+
 from gcompris import gcompris_gettext as _
 
 #
@@ -47,6 +50,10 @@ class Gcompris_decryption:
     self.gcomprisBoard.maxlevel = 3
     self.gcomprisBoard.sublevel = 1
     self.gcomprisBoard.number_of_sublevel = 3
+    self.won = False
+
+    # The text entry for input
+    self.entry = None
 
     # Parameters for different sublevels
     self.NUMBERS = 1
@@ -91,12 +98,6 @@ class Gcompris_decryption:
                             stop_board)
       return;
 
-
-    # self.wordlist = gcompris.get_wordlist("wordsgame/default-en.xml")
-    # print unicode(gcompris.get_random_word(self.wordlist, 1), encoding="utf8")
-
-
-
     # Create our rootitem. We put each canvas item in it so at the end we
     # only have to kill it. The canvas deletes all the items it contains
     # automaticaly.
@@ -104,31 +105,6 @@ class Gcompris_decryption:
                                    self.gcomprisBoard.canvas.get_root_item())
 
     self.next_level()
-
-    ''' 
-    key_value(self.rootitem,26)
-    goocanvas.Text(parent=self.rootitem,
-                                 x = 280,
-                                 y = gcompris.BOARD_HEIGHT/2,
-                                 fill_color = "white",
-                                 font = gcompris.skin.get_font("gcompris/title"),
-                                 anchor = gtk.ANCHOR_CENTER,
-                                 text = _("Decode the encrypted text given below  "))
-    self.display_arrow()
-
-    # TUX svghandle
-    svghandle = gcompris.utils.load_svg("decryption/tux.svg")
-    self.tuxitem = goocanvas.Svg(
-                                     parent = self.rootitem,
-                                     svg_handle = svghandle,
-                                     svg_id = "#TUX",
-                                     tooltip = _("click on me to check whether you have decrypted rightly")
-                                     )
-    self.tuxitem.translate(560,340)
-    self.tuxitem.connect("button_press_event", self.next_level)
-    gcompris.utils.item_focus_init(self.tuxitem, None)
-
-    '''
 
 
   def end(self):
@@ -142,7 +118,7 @@ class Gcompris_decryption:
 
   def repeat(self):
     print("decryption repeat.")
-
+    self.next_level()
 
   #mandatory but unused yet
   def config_stop(self):
@@ -156,14 +132,16 @@ class Gcompris_decryption:
     utf8char = gtk.gdk.keyval_to_unicode(keyval)
     strn = u'%c' % utf8char
 
-    print("Gcompris_decryption key press keyval=%i %s" % (keyval, strn))
+    print strn
 
   def pause(self, pause):
     print("decryption pause. %i" % pause)
 
+    if ((pause == 0) and (self.won == True)):
+      self.next_level()
 
-  def set_level(self, level):
-    print("decryption set level. %i" % level)
+    return
+
 
   def display_arrow(self):
     x_init = 40
@@ -180,9 +158,10 @@ class Gcompris_decryption:
                     y = 155,
                     )
       x_init = x_init + 58
-  
+
+  # Called by gcompris when the user clicks on level icons
   def set_level(self, level):
-    print("encryption set level. %i" % level)
+    print("decryption set level. %i" % level)
     self.gcomprisBoard.level = level
     self.gcomprisBoard.sublevel = 1
     self.next_level()
@@ -199,6 +178,54 @@ class Gcompris_decryption:
 
     return 1
 
+  # Receive entered text
+  def entry_text(self):
+    self.entry = gtk.Entry()
+
+    self.entry.modify_font(pango.FontDescription("sans bold 25"))
+
+    self.entry.set_max_length(len(self.word))
+    self.entry.connect("activate", self.enter_callback)
+    self.entry.connect("changed", self.enter_char_callback)
+
+    self.entry.props.visibility = goocanvas.ITEM_VISIBLE
+
+    self.widget = goocanvas.Widget(parent = self.rootitem,
+                                   widget = self.entry,
+                                   x = 275,
+                                   y = 450,
+                                   width = 300,
+                                   height = 100,
+                                   anchor = gtk.ANCHOR_CENTER,
+                                   )
+
+    self.widget.raise_(None)
+
+    self.entry.grab_focus()
+
+    return self.entry
+
+  def enter_char_callback(self, widget):
+    text = widget.get_text()
+    widget.set_text(text.decode('utf8').upper().encode('utf8'))
+
+  def enter_callback(self, widget):
+    text = widget.get_text()
+    print "received : " + text
+    print "expected : " + self.word.upper()
+
+    if (self.word.upper() == text):
+      print "you win"
+      self.won = True
+      self.increment_level()
+      gcompris.sound.play_ogg("sounds/tuxok.wav")
+      gcompris.bonus.display(gcompris.bonus.WIN, gcompris.bonus.TUX)
+    else:
+      print "try again"
+      gcompris.bonus.display(gcompris.bonus.LOOSE, gcompris.bonus.TUX)
+
+    widget.set_text('')
+
   # Place background image and control bar
   def base_setup(self):
     gcompris.set_background(self.gcomprisBoard.canvas.get_root_item(), "decryption/background.png")
@@ -212,6 +239,8 @@ class Gcompris_decryption:
 
 
   def next_level(self):
+    self.won = False
+    print "sublevel: " + str(self.gcomprisBoard.sublevel)
 
     self.rootitem.remove()
 
@@ -243,23 +272,37 @@ class Gcompris_decryption:
 
     self.ciphertext = ""
     for i in self.values:
-      self.ciphertext += str(i) + "   "
-
-    goocanvas.Rect(parent = self.rootitem,
-                   x = 50,
-                   y = 350,
-                   width = 350,
-                   height = 100,
-                   stroke_color = "black",
-                   fill_color = "green",
-                   line_width = 1.0
-                   )
+      self.ciphertext += str(i) + "  "
 
     goocanvas.Text(parent = self.rootitem,
-                   x = 220,
-                   y = 400,
-                   fill_color = "black",
+                   x = 275,
+                   y = 360,
+                   fill_color = "white",
                    font = gcompris.skin.get_font("gcompris/subtitle"),
                    anchor = gtk.ANCHOR_CENTER,
                    text = self.ciphertext
                    )
+
+    text_item = self.entry_text()
+
+    # TUX svghandle
+    svghandle = gcompris.utils.load_svg("decryption/tux.svg")
+    self.tuxitem = goocanvas.Svg(
+                                     parent = self.rootitem,
+                                     svg_handle = svghandle,
+                                     svg_id = "#TUX",
+                                     # tooltip = _("click on me to check whether you have decrypted rightly")
+                                     )
+    self.tuxitem.translate(560,340)
+
+    item = goocanvas.Svg(parent = self.rootitem,
+                         svg_handle = gcompris.skin.svg_get(),
+                         svg_id = "#OK"
+                         )
+    item.translate(-100, -20)
+    item.connect("button_press_event", self.ok_event, text_item)
+    gcompris.utils.item_focus_init(item, None)
+
+
+  def ok_event(self, widget, target, event, data):
+    self.enter_callback(data)
