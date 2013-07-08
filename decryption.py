@@ -135,7 +135,6 @@ class Gcompris_decryption:
     print strn
 
   def pause(self, pause):
-    print("decryption pause. %i" % pause)
 
     if ((pause == 0) and (self.won == True)):
       self.next_level()
@@ -161,7 +160,6 @@ class Gcompris_decryption:
 
   # Called by gcompris when the user clicks on level icons
   def set_level(self, level):
-    print("decryption set level. %i" % level)
     self.gcomprisBoard.level = level
     self.gcomprisBoard.sublevel = 1
     self.next_level()
@@ -211,17 +209,13 @@ class Gcompris_decryption:
 
   def enter_callback(self, widget):
     text = widget.get_text()
-    print "received : " + text
-    print "expected : " + self.word.upper()
 
     if (self.word.upper() == text):
-      print "you win"
       self.won = True
       self.increment_level()
       gcompris.sound.play_ogg("sounds/tuxok.wav")
       gcompris.bonus.display(gcompris.bonus.WIN, gcompris.bonus.TUX)
     else:
-      print "try again"
       gcompris.bonus.display(gcompris.bonus.LOOSE, gcompris.bonus.TUX)
 
     widget.set_text('')
@@ -240,7 +234,6 @@ class Gcompris_decryption:
 
   def next_level(self):
     self.won = False
-    print "sublevel: " + str(self.gcomprisBoard.sublevel)
 
     self.rootitem.remove()
 
@@ -265,14 +258,14 @@ class Gcompris_decryption:
                           )
     self.letters = list(self.word)
     self.letters = map(lambda x: x.upper(), self.letters)
-    print self.letters
 
     self.values = map(lambda x: self.pair[x], self.letters)
-    print self.values
 
-    self.ciphertext = ""
+    self.ciphertext = "\" "
     for i in self.values:
-      self.ciphertext += str(i) + "  "
+      self.ciphertext +=  str(i) + "  "
+
+    self.ciphertext += "\""
 
     goocanvas.Text(parent = self.rootitem,
                    x = 275,
@@ -302,6 +295,15 @@ class Gcompris_decryption:
     item.translate(-100, -20)
     item.connect("button_press_event", self.ok_event, text_item)
     gcompris.utils.item_focus_init(item, None)
+
+    goocanvas.Text(parent = self.rootitem,
+                   x = 220,
+                   y = 250,
+                   fill_color = "yellow",
+                   font = gcompris.skin.get_font("gcompris/subtitle"),
+                   anchor = gtk.ANCHOR_CENTER,
+                   text = _("Decode the encrypted text given below")
+                   ) 
 
 
   def ok_event(self, widget, target, event, data):

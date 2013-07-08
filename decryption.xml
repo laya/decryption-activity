@@ -6,15 +6,15 @@
         section="/experimental"
         icon="decryption.png"
         difficulty="1"
-        author="your name here"
+        author="lavanya (lavanyagunasekar@gmail.com)"
         boarddir=""
         >
-        <title>set a title for decryption</title>
-        <description>set a description for decryption</description>
-        <prerequisite>set a prerequisite for decryption</prerequisite>
-        <goal>set a goal for decryption</goal>
-        <manual>set a manual for decryption</manual>
-        <credit>set a credit for decryption</credit>
+        <title>Decryption</title>
+        <description></description>
+        <prerequisite>Basic understanding of substitution algorithm</prerequisite>
+        <goal>To teach decryption technique in cryptography</goal>
+        <manual></manual>
+        <credit></credit>
   </Board>
   <Data directory=""/>
 </GCompris>
